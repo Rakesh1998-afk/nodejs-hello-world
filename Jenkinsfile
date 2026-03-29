@@ -1,68 +1,40 @@
 pipeline {
     agent any
-
-    tools {
-        nodejs 'NodeJS' // Must match the name configured in Jenkins > Global Tool Configuration
-    }
-
+    tools { nodejs 'NodeJS' }
     environment {
-        APP_PORT = '3000'
+        APP_PORT       = '3000'
+        DOCKER_IMAGE   = 'rakesh1998afk/nodejs-hello-world'
+        DOCKER_TAG     = 'latest'
+        CONTAINER_NAME = 'nodejs-hello-world'
     }
-
     stages {
-
-        stage('Checkout') {
+        stage('Checkout')            { steps { checkout scm } }
+        stage('Install')             { steps { sh 'npm install' } }
+        stage('Test')                { steps { sh 'npm test' } }
+        stage('Build Docker Image')  { steps { sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ." } }
+        stage('Push to Docker Hub') {
             steps {
-                echo '📥 Checking out source code...'
-                checkout scm
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    sh 'docker logout'
+                }
             }
         }
-
-        stage('Install Dependencies') {
+        stage('Deploy') {
             steps {
-                echo '📦 Installing dependencies...'
-                sh 'npm install'
+                sh "docker stop ${CONTAINER_NAME} || true"
+                sh "docker rm   ${CONTAINER_NAME} || true"
+                sh "docker run -d --name ${CONTAINER_NAME} -p ${APP_PORT}:3000 --restart unless-stopped ${DOCKER_IMAGE}:${DOCKER_TAG}"
             }
         }
-
-        stage('Run Tests') {
-            steps {
-                echo '🧪 Running tests...'
-                sh 'npm test'
-            }
-        }
-
-        stage('Start App (Smoke Test)') {
-            steps {
-                echo '🚀 Starting app for smoke test...'
-                sh '''
-                    node app.js &
-                    sleep 3
-                    curl -f http://localhost:${APP_PORT}/ || exit 1
-                    echo "✅ App responded with Hello, World!"
-                    kill $(lsof -t -i:${APP_PORT}) || true
-                '''
-            }
-        }
-
-        stage('Archive Artifacts') {
-            steps {
-                echo '📦 Archiving project files...'
-                archiveArtifacts artifacts: '**/*.js, package.json', fingerprint: true
-            }
+        stage('Smoke Test') {
+            steps { sh 'sleep 3 && curl -f http://localhost:3000/' }
         }
     }
-
     post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Pipeline failed. Check the logs above.'
-        }
-        always {
-            echo '🧹 Cleaning up workspace...'
-            cleanWs()
-        }
+        success { echo '✅ App is live at http://localhost:3000' }
+        failure { sh "docker stop ${CONTAINER_NAME} || true" }
+        always  { sh 'docker image prune -f || true' }
     }
 }

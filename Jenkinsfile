@@ -3,7 +3,7 @@ pipeline {
     tools { nodejs 'NodeJS' }
     environment {
         APP_PORT       = '3000'
-        DOCKER_IMAGE   = 'rakesh1998afk/nodejs-hello-world'
+        DOCKER_IMAGE   = 'raaki1234/nodejs-hello-world'
         DOCKER_TAG     = 'latest'
         CONTAINER_NAME = 'nodejs-hello-world'
     }

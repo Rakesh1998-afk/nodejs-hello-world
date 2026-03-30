@@ -29,14 +29,15 @@ pipeline {
             }
         }
         stage('Smoke Test') {
-            sh '''
-    sleep 5
-    WINDOWS_HOST=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
-    echo "Testing against Windows host: $WINDOWS_HOST"
-    curl -f http://$WINDOWS_HOST:3000/
-'''
-        }
+    steps {
+        sh '''
+            sleep 5
+            WINDOWS_HOST=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+            echo "Testing against Windows host: $WINDOWS_HOST"
+            curl -f http://$WINDOWS_HOST:3000/
+        '''
     }
+}
     post {
         success { echo '✅ App is live at http://localhost:3000' }
         failure { sh "docker stop ${CONTAINER_NAME} || true" }

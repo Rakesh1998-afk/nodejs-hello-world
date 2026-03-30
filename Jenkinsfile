@@ -29,7 +29,12 @@ pipeline {
             }
         }
         stage('Smoke Test') {
-            steps { sh 'sleep 3 && curl -f http://localhost:3000/' }
+            sh '''
+    sleep 5
+    WINDOWS_HOST=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+    echo "Testing against Windows host: $WINDOWS_HOST"
+    curl -f http://$WINDOWS_HOST:3000/
+'''
         }
     }
     post {

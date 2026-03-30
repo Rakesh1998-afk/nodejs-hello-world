@@ -40,7 +40,7 @@ pipeline {
                 sh '''
                     docker stop nodejs-hello-world || true
                     docker rm nodejs-hello-world || true
-                    docker run -d --name nodejs-hello-world -p 3000:3000 --restart unless-stopped raaki1234/nodejs-hello-world:latest
+                    docker run -d --name nodejs-hello-world -p 3001:3001 --restart unless-stopped raaki1234/nodejs-hello-world:latest
                 '''
             }
         }
@@ -48,9 +48,9 @@ pipeline {
             steps {
                 sh '''
                     sleep 5
-                    WINDOWS_HOST=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+                    WINDOWS_HOST=172.22.224.1
                     echo "Testing against Windows host: $WINDOWS_HOST"
-                    curl -f http://$WINDOWS_HOST:3000/
+                    curl -f http://$WINDOWS_HOST:3001/
                 '''
             }
         }
@@ -58,7 +58,6 @@ pipeline {
     post {
         always {
             sh 'docker image prune -f'
-            sh 'docker stop nodejs-hello-world || true'
         }
     }
 }
